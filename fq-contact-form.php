@@ -3,23 +3,167 @@
 Plugin Name: FQ Contact Form
 Plugin URI: http://www.figoliquinn.com/
 Description: Easy way to add a contact form
-Version: 1.0.0
+Version: 0.9
 Author: Figoli Quinn
 Author URI: http://www.figoliquinn.com/
 License: GPL
 Copyright: Figoli Quinn
 */
-defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+defined( 'ABSPATH' ) or die( 'No access!' );
 
 
 
 
-if ( is_admin() && class_exists( 'BFIGitHubPluginUpdater' ) ) {
 
-	// Check for updates at GitHub
-    new BFIGitHubPluginUpdater( __FILE__, 'figoliquinn', "fq-contact-form" );
+
+
+
+
+
+function fq_contact_form_activate() {
+	
+	add_option( 'fq_contact_form_activated', time() );
+	fq_contact_form_init();
+	flush_rewrite_rules();
+}
+register_activation_hook( __FILE__ , 'fq_contact_form_activate' );
+
+
+
+
+function fq_contact_form_deactivate() {
+
+    delete_option( 'fq_contact_form_activated' );
+	flush_rewrite_rules();
+}
+register_deactivation_hook( __FILE__ , 'fq_contact_form_deactivate' );
+
+
+
+
+
+function fq_contact_form_init() {
+
+	if ( class_exists( 'BFIGitHubPluginUpdater' ) ) {
+		
+		// Check for updates at GitHub
+		// wp_die('oops!');
+		$update = new BFIGitHubPluginUpdater( __FILE__ , 'figoliquinn', 'fq-contact-form' , '2d751809306a7e660989b331a3fa2a4d3d25631e' );
+		#wp_die(print_r($update,true));
+	}
+
+	if( class_exists('FQ_Custom_Post_Type') ) {
+
+		$contacts = new FQ_Custom_Post_Type('contact');
+		$contacts->register();
+	}
+
+
+	if( is_admin() && class_exists('FQ_Settings') ) {
+
+		$settings = new FQ_Settings();
+		$settings->parent_slug	= 'edit.php?post_type=contact';
+		$settings->menu_slug	= 'contact-form-settings';
+		$settings->menu_title	= 'Contact Form Settings';
+		$settings->page_title	= 'Contact Form Settings';
+		$settings->page_intro	= 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin dapibus pulvinar lacus, id pharetra ipsum ultricies quis. Nullam a placerat dui. In turpis turpis, ultricies vel sodales pulvinar, rhoncus id sapien. Aenean egestas ante quis libero vestibulum porta. Sed faucibus id nibh ac molestie. Sed blandit urna a molestie ultricies. Duis scelerisque varius enim, a dapibus sem aliquet eu. Ut in turpis sed neque facilisis vulputate eu id ex. Nam gravida tempus lectus quis elementum.';
+		$settings->settings	= array(
+			array(
+				'label' => 'Send To',
+				'name' => 'contact-form-send-to',
+				'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
+				'class' => 'regular-text', // large-text, regular-text
+				'value' => '', // default value
+				'description' => 'Enter a comma-seperated list of email addresses to send contact form submissions.',
+				'options' => array("Small","Medium","Large"),
+				'rows' => 5,
+			),
+			array(
+				'label' => 'Reply To',
+				'name' => 'contact-form-reply-to',
+				'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
+				'class' => 'regular-text', // large-text, regular-text
+				'value' => '', // default value
+				'description' => 'Enter a single email address for contact form submissions to reply to.',
+				'options' => array("Small","Medium","Large"),
+				'rows' => 5,
+			),
+			array(
+				'label' => 'Form Elements',
+				'name' => 'contact-form-show-elements',
+				'type' => 'checkbox', // select, radio, checkbox, textarea, upload, OR text
+				'description' => 'This is a description',
+				'options' => array(
+					"your_name"=>"Name",
+					"your_email"=>"Email",
+					"your_phone"=>"Phone",
+					"your_subject"=>"Subject",
+					"your_message"=>"Message"
+				),
+				'value' => array(),// default value
+				'rows' => 5,
+			),
+			array(
+				'label' => 'Reply Subject',
+				'name' => 'contact-form-reply-subject',
+				'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
+				'value' => 'You have recieved an email from your website.', // default value
+				'description' => 'This is the subject of the email you recive (unless you allow the user to enter their own subject.)',
+			),
+			array(
+				'label' => 'Reply Message',
+				'name' => 'contact-form-reply-message',
+				'type' => 'textarea', // select, radio, checkbox, textarea, upload, OR text
+				'value' => '', // default value
+				'description' => '
+				This is the email you will recieve after someone has submitted the form. 
+				You can use the following variables that will be replaced with actual values.
+				{name}, {email}, {phone}, {subject}, {message}.
+				',
+				'options' => array("Small","Medium","Large"),
+				'rows' => 10,
+			),
+			array(
+				'label' => 'Auto-Reply Subject',
+				'name' => 'contact-form-auto-reply-subject',
+				'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
+				'value' => 'Thanks for your message!', // default value
+				'description' => 'This is the subject of the email the sender will receive.',
+			),
+			array(
+				'label' => 'Auto-Reply Messsage',
+				'name' => 'contact-form-auto-reply-message',
+				#'group' => 'setting-group' ,
+				'type' => 'textarea', // select, radio, checkbox, textarea, upload, OR text
+				'value' => '', // default value
+				'description' => '
+				This is the email that will be sent to the sender after they have submitted the form. 
+				You can use the following variables that will be replaced with actual values.
+				{name}, {email}, {phone}, {subject}, {message}.
+				',
+				'options' => array("Small","Medium","Large"),
+				'rows' => 10,
+			),
+		);
+
+	}
+
 
 }
+add_action( 'init', 'fq_contact_form_init' );
+
+
+
+
+/* This adds a link to the settings page from the plugins page */
+function fq_contact_form_plugin_actions( $actions, $plugin_file, $plugin_data, $context ) {
+
+	array_unshift($actions, "<a href=\"".admin_url('edit.php?post_type=contact&page=contact-form-settings')."\">".__("Settings")."</a>");
+	return $actions;
+}
+add_filter("plugin_action_links_".plugin_basename(__FILE__), "fq_contact_form_plugin_actions", 10, 4);
+
+
 
 
 
@@ -57,173 +201,59 @@ function fq_contact_form_required_plugin_check() {
             unset( $_GET['activate'] );
         }
     }
-}
-function fq_cf_cpt_notice(){ ?>
 
+}
+function fq_cf_cpt_notice(){
+
+	echo '
 	<div class="error">
 		<p>
 			Sorry, but FQ Contact Form requires the 
 			<a target="_blank" href="https://github.com/figoliquinn/fq_custom_post_types">FQ Custom Post Types plugin</a> to be installed and active.
 		</p>
 	</div>
+	';
 
-<?php }
-function fq_cf_st_notice(){ ?>
-
+}
+function fq_cf_st_notice(){
+	
+	echo '
 	<div class="error">
 		<p>
 			Sorry, but FQ Contact Form requires the 
 			<a target="_blank" href="https://github.com/figoliquinn/fq_settings">FQ Settings plugin</a> to be installed and active.
 		</p>
 	</div>
-<?php }
-function fq_cf_fb_notice(){ ?>
-
+	';
+}
+function fq_cf_fb_notice(){
+	
+	echo '
 	<div class="error">
 		<p>
 			Sorry, but FQ Contact Form requires the 
 			<a target="_blank" href="https://github.com/figoliquinn/fq_form_builder">FQ Form Builder plugin</a> to be installed and active.
 		</p>
 	</div>
-<?php }
-function fq_cf_update_notice(){ ?>
+	';
+}
+function fq_cf_update_notice(){
 
+	echo '
 	<div class="error">
 		<p>
 			Sorry, but FQ Contact Form requires the 
 			<a target="_blank" href="https://github.com/figoliquinn/fq_updater_check">FQ Updater Check plugin</a> to be installed and active.
 		</p>
 	</div>
-<?php }
+	';
+}
 add_action( 'admin_init', 'fq_contact_form_required_plugin_check' );
 
 
 
 
 
-
-
-function fq_contact_form_init() {
-
-	if(class_exists('FQ_Custom_Post_Type')) {
-		$contacts = new FQ_Custom_Post_Type('contact');
-		$contacts->register();
-	}
-
-
-	return;
-	
-	// Include the Form Class
-	#require_once(dirname(__FILE__).'/fq-form-class.php');
-
-
-	// Include the Custom Post Types Class
-	#require_once(dirname(__FILE__).'/fq-custom-post-types-class.php');
-	#$contacts = new FQ_Custom_Post_Type('contact');
-	#$contacts->register();
-
-
-
-
-	// Include the Settings Class
-	#require_once(dirname(__FILE__).'/fq-settings-class.php');
-	$settings = new FQ_Settings();
-	$settings->parent_slug	= 'edit.php?post_type=contact';
-	#$settings->parent_slug	= false;
-	$settings->menu_slug	= 'contact-form-settings';
-	$settings->menu_title	= 'Contact Form Settings';
-	$settings->page_title	= 'Contact Form Settings';
-	$settings->page_intro	= 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin dapibus pulvinar lacus, id pharetra ipsum ultricies quis. Nullam a placerat dui. In turpis turpis, ultricies vel sodales pulvinar, rhoncus id sapien. Aenean egestas ante quis libero vestibulum porta. Sed faucibus id nibh ac molestie. Sed blandit urna a molestie ultricies. Duis scelerisque varius enim, a dapibus sem aliquet eu. Ut in turpis sed neque facilisis vulputate eu id ex. Nam gravida tempus lectus quis elementum.';
-	
-	$settings->settings	= array(
-		array(
-			'label' => 'Send To',
-			'name' => 'contact-form-send-to',
-			'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
-			'class' => 'regular-text', // large-text, regular-text
-			'value' => '', // default value
-			'description' => 'Enter a comma-seperated list of email addresses to send contact form submissions.',
-			'options' => array("Small","Medium","Large"),
-			'rows' => 5,
-		),
-		array(
-			'label' => 'Reply To',
-			'name' => 'contact-form-reply-to',
-			'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
-			'class' => 'regular-text', // large-text, regular-text
-			'value' => '', // default value
-			'description' => 'Enter a single email address for contact form submissions to reply to.',
-			'options' => array("Small","Medium","Large"),
-			'rows' => 5,
-		),
-		array(
-			'label' => 'Form Elements',
-			'name' => 'contact-form-show-elements',
-			'type' => 'checkbox', // select, radio, checkbox, textarea, upload, OR text
-			'description' => 'This is a description',
-			'options' => array(
-				"your_name"=>"Name",
-				"your_email"=>"Email",
-				"your_phone"=>"Phone",
-				"your_subject"=>"Subject",
-				"your_message"=>"Message"
-			),
-			'value' => array(),// default value
-			'rows' => 5,
-		),
-		array(
-			'label' => 'Reply Subject',
-			'name' => 'contact-form-reply-subject',
-			'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
-			'value' => 'You have recieved an email from your website.', // default value
-			'description' => 'This is the subject of the email you recive (unless you allow the user to enter their own subject.)',
-		),
-		array(
-			'label' => 'Reply Message',
-			'name' => 'contact-form-reply-message',
-			'type' => 'textarea', // select, radio, checkbox, textarea, upload, OR text
-			'value' => '', // default value
-			'description' => '
-			This is the email you will recieve after someone has submitted the form. 
-			You can use the following variables that will be replaced with actual values.
-			{name}, {email}, {phone}, {subject}, {message}.
-			',
-			'options' => array("Small","Medium","Large"),
-			'rows' => 10,
-		),
-		array(
-			'label' => 'Auto-Reply Subject',
-			'name' => 'contact-form-auto-reply-subject',
-			'type' => 'text', // select, radio, checkbox, textarea, upload, OR text
-			'value' => 'Thanks for your message!', // default value
-			'description' => 'This is the subject of the email the sender will receive.',
-		),
-		array(
-			'label' => 'Auto-Reply Messsage',
-			'name' => 'contact-form-auto-reply-message',
-			#'group' => 'setting-group' ,
-			'type' => 'textarea', // select, radio, checkbox, textarea, upload, OR text
-			'value' => '', // default value
-			'description' => '
-			This is the email that will be sent to the sender after they have submitted the form. 
-			You can use the following variables that will be replaced with actual values.
-			{name}, {email}, {phone}, {subject}, {message}.
-			',
-			'options' => array("Small","Medium","Large"),
-			'rows' => 10,
-		),
-	);
-	
-
-
-}
-add_action( 'init', 'fq_contact_form_init' );
-
-
-
-
-
-// MODIFY ADMIN COLUMNS
 function fq_contact_custom_column_heads($defaults) {
 	
 	unset($defaults['author']);
@@ -233,8 +263,6 @@ function fq_contact_custom_column_heads($defaults) {
 	$defaults['message'] = 'Message';
 	return $defaults;
 }
- 
-// SHOW ADMIN COLUMNS
 function fq_contact_custom_content($column_name, $post_ID) {
 
     if ($column_name == 'message') {
@@ -249,49 +277,6 @@ add_action('manage_contact_posts_custom_column', 'fq_contact_custom_content', 10
 
 
 
-
-
-
-
-
-
-
-
-function fq_contact_form_activate() {
-
-	// Trigger our function that registers the custom post type
-	fq_contact_form_init();
-
-	// Clear the permalinks after the post type has been registered
-	flush_rewrite_rules();
-
-}
-register_activation_hook( __FILE__, 'fq_contact_form_activate' );
-
-
-
-
-
-
-
-function fq_contact_form_deactivate() {
-
-	flush_rewrite_rules();
-
-}
-register_deactivation_hook( __FILE__, 'fq_contact_form_deactivate' );
-
-
-
-
-
-
-
-
-
-
-add_shortcode( 'fq_contact_form' , 'fq_contact_form_shortcode' );
-
 function fq_contact_form_shortcode( $atts = array() , $content = '' , $tag = '' ){
 
 
@@ -304,8 +289,8 @@ function fq_contact_form_shortcode( $atts = array() , $content = '' , $tag = '' 
 	), $atts ));
 
 
-
-	require_once(dirname(__FILE__).'/fq-form-class.php');
+	if( !class_exists('FQ_Form_Builder') ) return;
+	
 	$form = new FQ_Form_Builder();
 	$form->form['action'] = get_permalink().'#contact';
 	$form->send_to = $send_to;
@@ -382,15 +367,14 @@ function fq_contact_form_shortcode( $atts = array() , $content = '' , $tag = '' 
 
 
 }
+add_shortcode( 'fq_contact_form' , 'fq_contact_form_shortcode' );
 
 
 
 
 
+function time2str($ts) {
 
-
-function time2str($ts)
-{
     if(!ctype_digit($ts))
         $ts = strtotime($ts);
 
@@ -433,3 +417,8 @@ function time2str($ts)
         return date('F Y', $ts);
     }
 }
+
+
+
+
+
